@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Package, ReceiptText, Truck, Users, Warehouse } from "lucide-react";
+import { Home, Package, ReceiptText, Truck, Users, Warehouse } from "lucide-react";
 
 export interface NavItem {
   href: string;
@@ -10,11 +10,14 @@ export interface NavItem {
   adminOnly?: boolean;
 }
 
-// Produtos + Fornecedores + Compras + Estoque + Usuários. Dashboard/fichas
-// técnicas are still out of scope. Estoque is NOT adminOnly — every role can
-// need it (manager/operator do the actual counting), the page itself gates
-// on sector access (StockNoSectorState) rather than hiding the nav item.
+// Home + Produtos + Fornecedores + Compras + Estoque + Usuários. Home is the
+// landing page after login (empty placeholder for now — becomes the real
+// dashboard later); fichas técnicas is still out of scope. Estoque is NOT
+// adminOnly — every role can need it (manager/operator do the actual
+// counting), the page itself gates on sector access (StockNoSectorState)
+// rather than hiding the nav item.
 export const NAV_ITEMS: NavItem[] = [
+  { href: "/home", label: "Home", icon: Home },
   { href: "/produtos", label: "Produtos", icon: Package },
   { href: "/fornecedores", label: "Fornecedores", icon: Truck },
   { href: "/compras", label: "Compras", icon: ReceiptText },

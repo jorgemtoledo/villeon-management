@@ -36,7 +36,7 @@ export function LoginForm() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace("/produtos");
+      router.replace("/home");
     }
   }, [status, router]);
 
