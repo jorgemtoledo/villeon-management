@@ -1,0 +1,12 @@
+# Root-level env files used by docker-compose. Each service has its own
+# .gitignore for its internal files (backend/.gitignore, frontend/.gitignore).
+.env
+.env.*
+!.env.example
+.env.example
+
+.DS_Store
+
+/docs/*
+
+.claude

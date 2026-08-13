@@ -1,0 +1,15 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 105,
+      "fingerprint": "f5d5ecea18a3e29c55eac8e6060b963c8066fe882fe5c16ff6d0d50f438df476",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/controllers/api/v1/users_controller.rb",
+      "line": 85,
+      "note": "Intentional (Bloco 6F): :role must be mass-assignable here — this endpoint's whole purpose is letting an admin set a user's role. Both #create and #update call authorize! against User before user_params is ever read, so manager/operator get 403 and never reach this permit call at all."
+    }
+  ],
+  "brakeman_version": "8.0.5"
+}
