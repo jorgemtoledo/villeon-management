@@ -5,8 +5,10 @@ services:
       POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
       POSTGRES_DB: ${DATABASE_NAME:-villeon_development}
-    ports:
-      - "5432:5432"
+    # Not published to the host on purpose: only backend/sidekiq talk to it,
+    # over the compose network by service name ("db"). Publishing 5432 to
+    # the host risks colliding with another project's Postgres already
+    # bound to that same port on a shared VPS.
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,8 +19,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # Same reasoning as db above — internal-only, same compose network.
     volumes:
       - redis_data:/data
     healthcheck:
