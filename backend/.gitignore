@@ -31,3 +31,7 @@
 # Ignore key files for decrypting credentials and more.
 /config/*.key
 
+# Generated from real business data (pricing, suppliers) — never committed,
+# copied to each environment manually (e.g. scp), same as config/master.key.
+/db/seeds_production.rb
+

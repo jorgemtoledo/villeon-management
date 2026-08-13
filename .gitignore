@@ -10,3 +10,5 @@
 /docs/*
 
 .claude
+
+/db/seeds_production.rb
