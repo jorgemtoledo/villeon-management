@@ -18,11 +18,12 @@ Rails.application.configure do
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 
-  # Assume all access to the app is happening through a SSL-terminating reverse proxy.
-  config.assume_ssl = true
-
-  # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  config.force_ssl = true
+  # Both flip together once a TLS-terminating reverse proxy sits in front of this
+  # app (i.e. once a domain + certificate exist). Until then this serves plain
+  # HTTP on a bare IP, so this must stay "false". Flip RAILS_FORCE_SSL=true in
+  # the deploy's .env when that day comes — no code change needed.
+  config.assume_ssl = ENV.fetch("RAILS_FORCE_SSL", "false") == "true"
+  config.force_ssl = ENV.fetch("RAILS_FORCE_SSL", "false") == "true"
 
   # Skip http-to-https redirect for the default health check endpoint.
   # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
@@ -49,8 +50,10 @@ Rails.application.configure do
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.
   # config.action_mailer.raise_delivery_errors = false
 
-  # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
+  # Set host to be used by links generated in mailer templates. IP-based for
+  # now since there's no domain yet; set APP_HOST in .env, swap it to the real
+  # domain later — no code change needed.
+  config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "localhost:3010") }
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.
   # config.action_mailer.smtp_settings = {
@@ -71,12 +74,14 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
+  # Enable DNS rebinding protection and other `Host` header attacks. Rails'
+  # own production default is an empty allow-list, which means the
+  # HostAuthorization middleware isn't even inserted into the stack — i.e.
+  # left unset (RAILS_ALLOWED_HOSTS blank), any Host header is accepted, same
+  # as today. Set RAILS_ALLOWED_HOSTS in .env (comma-separated) to opt in.
+  allowed_hosts = ENV.fetch("RAILS_ALLOWED_HOSTS", "").split(",").map(&:strip).reject(&:empty?)
+  config.hosts = allowed_hosts if allowed_hosts.any?
+
   # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 end
