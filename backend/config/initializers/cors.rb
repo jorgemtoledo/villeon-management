@@ -5,7 +5,7 @@
 #
 # Read more: https://github.com/cyu/rack-cors
 
-allowed_origins = ENV.fetch("CORS_ORIGINS", "http://localhost:3001").split(",").map(&:strip)
+allowed_origins = ENV.fetch("CORS_ORIGINS", "http://localhost:3011").split(",").map(&:strip)
 
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do

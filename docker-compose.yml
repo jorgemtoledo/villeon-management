@@ -29,13 +29,13 @@ services:
 
   backend:
     build: ./backend
-    command: ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+    command: ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3010"]
     env_file:
       - .env
     environment:
       RAILS_ENV: ${RAILS_ENV:-development}
     ports:
-      - "3000:3000"
+      - "3010:3010"
     volumes:
       - ./backend:/app
       # Read-only: source spreadsheets for data imports (e.g. rake products:import).

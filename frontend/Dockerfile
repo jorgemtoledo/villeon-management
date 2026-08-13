@@ -7,6 +7,6 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 3001
+EXPOSE 3011
 
-CMD ["npx", "next", "dev", "-p", "3001", "-H", "0.0.0.0"]
+CMD ["npx", "next", "dev", "-p", "3011", "-H", "0.0.0.0"]

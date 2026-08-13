@@ -25,6 +25,6 @@ RUN chmod +x bin/docker-entrypoint
 
 ENTRYPOINT ["bin/docker-entrypoint"]
 
-EXPOSE 3000
+EXPOSE 3010
 
-CMD ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+CMD ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3010"]

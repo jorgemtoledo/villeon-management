@@ -30,7 +30,7 @@ Isso sobe 4 serviços:
 
 | Serviço   | O que é                   | Porta no host    |
 | --------- | ------------------------- | ---------------- |
-| `backend` | API Rails                 | `localhost:3000` |
+| `backend` | API Rails                 | `localhost:3010` |
 | `sidekiq` | Worker de background jobs | —                |
 | `db`      | PostgreSQL 16             | `localhost:5432` |
 | `redis`   | Redis 7                   | `localhost:6379` |
@@ -44,8 +44,8 @@ docker compose exec backend bin/rails db:prepare
 ## Verificando que subiu
 
 ```bash
-curl http://localhost:3000/up               # health check de infra (não toca em DB/Redis)
-curl http://localhost:3000/api/v1/health     # health check da aplicação (confirma DB + Redis reais)
+curl http://localhost:3010/up               # health check de infra (não toca em DB/Redis)
+curl http://localhost:3010/api/v1/health     # health check da aplicação (confirma DB + Redis reais)
 ```
 
 A segunda rota deve responder `{"status":"ok","checks":{"database":true,"redis":true},...}`.
