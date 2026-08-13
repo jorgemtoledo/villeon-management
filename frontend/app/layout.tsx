@@ -19,8 +19,20 @@ export const metadata: Metadata = {
   description: "Gestão de catálogo, estoque e compras do VILLEON Restaurant.",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/brand/villeon-icon.png",
-    apple: "/brand/villeon-icon.png",
+    icon: "/icons/icon-512.png",
+    // Apple applies its own rounded-square mask on top of whatever image is
+    // given and renders transparency as black, so this needs a full-bleed
+    // opaque background — the same square used as the Android maskable icon
+    // already satisfies that.
+    apple: "/icons/icon-maskable-512.png",
+  },
+  // Pre-iOS 16.4 Safari ignores the manifest's display:standalone and needs
+  // these meta tags instead to launch without browser chrome from the home
+  // screen icon. Harmless on newer iOS/Android, which use the manifest.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "VILLEON",
   },
 };
 
