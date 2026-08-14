@@ -27,6 +27,11 @@ Rails.application.routes.draw do
 
         resource :stock, only: %i[show update], controller: "product_stocks"
         resources :stock_counts, only: %i[create], controller: "stock_counts"
+        resources :suppliers, only: %i[index create destroy], controller: "product_suppliers" do
+          member do
+            patch :prefer
+          end
+        end
       end
 
       resources :product_stocks, only: %i[index], controller: "product_stocks"

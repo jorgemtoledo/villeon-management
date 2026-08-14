@@ -13,6 +13,10 @@ class Ability
       # real permissions for that resource here, once it exists.
       can %i[index show], Product
       can %i[index show], Supplier
+      # Principal/alternate suppliers per product (Bloco 6I.1) — structural
+      # catalog data, same read/write split as Product/Supplier themselves:
+      # only admin adds/removes/promotes, everyone else only reads.
+      can %i[index], ProductSupplier
       can %i[index show], Purchase
       # Registering/editing a purchase (Bloco 6H.1/6H.3) is restricted to
       # manager, per the client's explicit rule (Felipe/admin and Fran/

@@ -1,10 +1,11 @@
 class ProductSerializer
-  def self.call(product)
-    new(product).call
+  def self.call(product, product_suppliers_count:)
+    new(product, product_suppliers_count).call
   end
 
-  def initialize(product)
+  def initialize(product, product_suppliers_count)
     @product = product
+    @product_suppliers_count = product_suppliers_count
   end
 
   def call
@@ -20,6 +21,7 @@ class ProductSerializer
       subcategory: reference(product.subcategory),
       purchase_unit: unit_reference(product.purchase_unit),
       stock_unit: unit_reference(product.stock_unit),
+      product_suppliers_count: product_suppliers_count,
       created_at: product.created_at,
       updated_at: product.updated_at
     }
@@ -27,7 +29,7 @@ class ProductSerializer
 
   private
 
-  attr_reader :product
+  attr_reader :product, :product_suppliers_count
 
   def reference(record)
     return nil if record.nil?

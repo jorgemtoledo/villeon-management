@@ -102,15 +102,14 @@ export default function ProdutosPage() {
         )
       ) : null}
 
-      {canManage ? (
-        <ProductFormSheet
-          open={sheetTarget !== undefined}
-          onOpenChange={(open) => {
-            if (!open) setSheetTarget(undefined);
-          }}
-          product={sheetTarget === "new" ? undefined : sheetTarget}
-        />
-      ) : null}
+      <ProductFormSheet
+        open={sheetTarget !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setSheetTarget(undefined);
+        }}
+        product={sheetTarget === "new" ? undefined : sheetTarget}
+        canManage={canManage}
+      />
     </div>
   );
 }

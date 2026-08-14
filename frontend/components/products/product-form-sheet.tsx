@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { ProductForm } from "@/components/products/product-form";
 import { ProductStockConfigForm } from "@/components/products/product-stock-config-form";
+import { ProductSuppliersSection } from "@/components/products/product-suppliers-section";
 import type { Product, ProductInput } from "@/types/product";
 
 const FORM_ID = "product-form";
@@ -24,9 +25,14 @@ interface ProductFormSheetProps {
   onOpenChange: (open: boolean) => void;
   // undefined = create mode, a Product = edit mode.
   product?: Product;
+  // manager/operator open this same sheet to view (Bloco 6I.1) — only admin
+  // can actually submit it. Create mode is unreachable for them regardless
+  // (no "Novo produto" button renders outside canManage), so this mainly
+  // controls the edit-mode read-only rendering below.
+  canManage: boolean;
 }
 
-export function ProductFormSheet({ open, onOpenChange, product }: ProductFormSheetProps) {
+export function ProductFormSheet({ open, onOpenChange, product, canManage }: ProductFormSheetProps) {
   const createMutation = useCreateProduct();
   // Hooks can't be called conditionally — id is only used by the mutation
   // fn when the form actually submits in edit mode, so a placeholder id
@@ -35,6 +41,7 @@ export function ProductFormSheet({ open, onOpenChange, product }: ProductFormShe
 
   const mutation = product ? updateMutation : createMutation;
   const isEditing = !!product;
+  const readOnly = !canManage;
 
   function handleSubmit(input: ProductInput) {
     mutation.mutate(input, {
@@ -59,11 +66,13 @@ export function ProductFormSheet({ open, onOpenChange, product }: ProductFormShe
     >
       <SheetContent side="right" className="w-full sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>{isEditing ? "Editar produto" : "Novo produto"}</SheetTitle>
+          <SheetTitle>{readOnly ? "Detalhes do produto" : isEditing ? "Editar produto" : "Novo produto"}</SheetTitle>
           <SheetDescription>
-            {isEditing
-              ? "Altere os dados do produto e salve para aplicar as mudanças."
-              : "Preencha os dados do novo produto do catálogo."}
+            {readOnly
+              ? "Visualize os dados do produto."
+              : isEditing
+                ? "Altere os dados do produto e salve para aplicar as mudanças."
+                : "Preencha os dados do novo produto do catálogo."}
           </SheetDescription>
         </SheetHeader>
 
@@ -75,22 +84,31 @@ export function ProductFormSheet({ open, onOpenChange, product }: ProductFormShe
             onSubmit={handleSubmit}
             errorMessage={errorMessage}
             errorDetails={errorDetails}
+            readOnly={readOnly}
           />
 
-          {/* Stock config is a separate resource/endpoint (Bloco 6G Parte 2)
-              from the Product fields above — only meaningful once the
-              product exists, so it's create-mode-only absent, with its own
-              independent save action. */}
-          {product ? <ProductStockConfigForm product={product} /> : null}
+          {/* Stock config is admin-only (Bloco 6G Parte 2, its own Ability
+              rule) — hidden entirely for read-only viewers rather than
+              rendered disabled, since manager/operator already have a
+              proper stock view at /estoque and don't need a redundant,
+              inert copy of it here. */}
+          {product && canManage ? <ProductStockConfigForm product={product} /> : null}
+
+          {/* Suppliers (Bloco 6I.1): everyone who can open this sheet can
+              see it — the section itself gates add/remove/prefer on
+              canManage internally. */}
+          {product ? <ProductSuppliersSection product={product} canManage={canManage} /> : null}
         </div>
 
         <SheetFooter className="flex-row justify-end gap-2">
           <Button type="button" variant="outline" className="h-11 md:h-9" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {readOnly ? "Fechar" : "Cancelar"}
           </Button>
-          <Button type="submit" form={FORM_ID} disabled={mutation.isPending} className="h-11 md:h-9">
-            {mutation.isPending ? "Salvando..." : isEditing ? "Salvar alterações" : "Criar produto"}
-          </Button>
+          {readOnly ? null : (
+            <Button type="submit" form={FORM_ID} disabled={mutation.isPending} className="h-11 md:h-9">
+              {mutation.isPending ? "Salvando..." : isEditing ? "Salvar alterações" : "Criar produto"}
+            </Button>
+          )}
         </SheetFooter>
       </SheetContent>
     </Sheet>

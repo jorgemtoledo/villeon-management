@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProductStatusActions } from "@/components/products/product-status-actions";
+import { ProductSuppliersCell } from "@/components/products/product-suppliers-cell";
 import type { Product } from "@/types/product";
 
 interface ProductsCardsProps {
@@ -16,7 +17,7 @@ export function ProductsCards({ products, canManage, onEdit }: ProductsCardsProp
   return (
     <div className="flex flex-col gap-3 md:hidden">
       {products.map((product) => (
-        <Card key={product.id}>
+        <Card key={product.id} onClick={() => onEdit(product)} className="cursor-pointer">
           <CardContent className="flex flex-col gap-3 px-4">
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -34,9 +35,13 @@ export function ProductsCards({ products, canManage, onEdit }: ProductsCardsProp
               <dd>{product.purchase_unit?.abbreviation ?? "—"}</dd>
               <dt className="text-muted-foreground">Unid. estoque</dt>
               <dd>{product.stock_unit?.abbreviation ?? "—"}</dd>
+              <dt className="text-muted-foreground">Fornecedores</dt>
+              <dd onClick={(event) => event.stopPropagation()}>
+                <ProductSuppliersCell productId={product.id} count={product.product_suppliers_count} />
+              </dd>
             </dl>
             {canManage ? (
-              <div className="pt-1">
+              <div className="pt-1" onClick={(event) => event.stopPropagation()}>
                 <ProductStatusActions product={product} onEdit={() => onEdit(product)} />
               </div>
             ) : null}

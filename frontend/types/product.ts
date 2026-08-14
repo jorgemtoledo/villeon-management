@@ -24,6 +24,7 @@ export interface Product {
   subcategory: NamedReference | null;
   purchase_unit: UnitReference | null;
   stock_unit: UnitReference | null;
+  product_suppliers_count: number;
   created_at: string;
   updated_at: string;
 }

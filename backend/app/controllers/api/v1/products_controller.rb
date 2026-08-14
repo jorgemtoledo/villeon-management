@@ -16,15 +16,18 @@ module Api
         scope = apply_sort(scope)
 
         pagy, products = pagy(scope, limit: per_page_param)
+        counts = product_suppliers_counts_for(products)
 
-        render json: { data: products.map { |product| ProductSerializer.call(product) }, meta: pagination_meta(pagy) },
-               status: :ok
+        render json: {
+          data: products.map { |product| ProductSerializer.call(product, product_suppliers_count: counts.fetch(product.id, 0)) },
+          meta: pagination_meta(pagy)
+        }, status: :ok
       end
 
       def show
         authorize! :show, @product
 
-        render json: ProductSerializer.call(@product), status: :ok
+        render json: ProductSerializer.call(@product, product_suppliers_count: @product.product_suppliers.count), status: :ok
       end
 
       def create
@@ -33,7 +36,7 @@ module Api
         product = Product.new(product_params)
 
         if product.save
-          render json: ProductSerializer.call(product), status: :created
+          render json: ProductSerializer.call(product, product_suppliers_count: 0), status: :created
         else
           render_unprocessable(product)
         end
@@ -43,7 +46,7 @@ module Api
         authorize! :update, @product
 
         if @product.update(product_params)
-          render json: ProductSerializer.call(@product), status: :ok
+          render json: ProductSerializer.call(@product, product_suppliers_count: @product.product_suppliers.count), status: :ok
         else
           render_unprocessable(@product)
         end
@@ -53,14 +56,14 @@ module Api
         authorize! :activate, @product
         @product.update!(active: true)
 
-        render json: ProductSerializer.call(@product), status: :ok
+        render json: ProductSerializer.call(@product, product_suppliers_count: @product.product_suppliers.count), status: :ok
       end
 
       def deactivate
         authorize! :deactivate, @product
         @product.update!(active: false)
 
-        render json: ProductSerializer.call(@product), status: :ok
+        render json: ProductSerializer.call(@product, product_suppliers_count: @product.product_suppliers.count), status: :ok
       end
 
       private
@@ -111,6 +114,12 @@ module Api
       def render_unprocessable(record)
         render json: { error: "Não foi possível salvar o produto.", details: record.errors.full_messages },
                status: :unprocessable_content
+      end
+
+      # One extra query for the whole page instead of one per product (N+1)
+      # — same reasoning/shape as SuppliersController#products_counts_for.
+      def product_suppliers_counts_for(products)
+        ProductSupplier.where(product_id: products.map(&:id)).group(:product_id).count
       end
     end
   end

@@ -55,9 +55,21 @@ interface ProductFormProps {
   onSubmit: (input: ProductInput) => void;
   errorMessage?: string | null;
   errorDetails?: string[];
+  // manager/operator open the same sheet as admin but can't submit it — a
+  // fieldset disables every native input in one shot; the three Selects
+  // (Base UI, not native <select>s) need `disabled` passed explicitly since
+  // they don't inherit it from the surrounding fieldset.
+  readOnly?: boolean;
 }
 
-export function ProductForm({ formId, product, onSubmit, errorMessage, errorDetails }: ProductFormProps) {
+export function ProductForm({
+  formId,
+  product,
+  onSubmit,
+  errorMessage,
+  errorDetails,
+  readOnly = false,
+}: ProductFormProps) {
   const { data: unitsData, isPending: unitsPending } = useUnits();
   const units = unitsData?.data ?? [];
 
@@ -103,6 +115,7 @@ export function ProductForm({ formId, product, onSubmit, errorMessage, errorDeta
         </Alert>
       ) : null}
 
+      <fieldset disabled={readOnly} className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field data-invalid={!!form.formState.errors.code}>
           <FieldLabel htmlFor="code">Código</FieldLabel>
@@ -130,6 +143,7 @@ export function ProductForm({ formId, product, onSubmit, errorMessage, errorDeta
                 <Select
                   value={field.value !== undefined ? String(field.value) : ""}
                   onValueChange={(value) => field.onChange(Number(value))}
+                  disabled={readOnly}
                   items={Object.fromEntries(SECTORS.map((sector) => [String(sector.id), sector.name]))}
                 >
                   <SelectTrigger
@@ -178,7 +192,7 @@ export function ProductForm({ formId, product, onSubmit, errorMessage, errorDeta
                 <Select
                   value={field.value !== undefined ? String(field.value) : ""}
                   onValueChange={(value) => field.onChange(Number(value))}
-                  disabled={unitsPending}
+                  disabled={readOnly || unitsPending}
                   items={Object.fromEntries(
                     units.map((unit) => [String(unit.id), `${unit.name} (${unit.abbreviation})`]),
                   )}
@@ -214,7 +228,7 @@ export function ProductForm({ formId, product, onSubmit, errorMessage, errorDeta
                 <Select
                   value={field.value !== undefined ? String(field.value) : ""}
                   onValueChange={(value) => field.onChange(Number(value))}
-                  disabled={unitsPending}
+                  disabled={readOnly || unitsPending}
                   items={Object.fromEntries(
                     units.map((unit) => [String(unit.id), `${unit.name} (${unit.abbreviation})`]),
                   )}
@@ -247,6 +261,7 @@ export function ProductForm({ formId, product, onSubmit, errorMessage, errorDeta
           <Input id="colibri_code" {...form.register("colibri_code")} />
         </FieldContent>
       </Field>
+      </fieldset>
     </form>
   );
 }

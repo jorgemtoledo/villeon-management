@@ -6,3 +6,9 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 # # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
 # Layout/SpaceInsideArrayLiteralBrackets:
 #   Enabled: false
+
+# Machine-generated data dump (see its own header comment) — not committed,
+# not hand-maintained, not meant to follow house style.
+AllCops:
+  Exclude:
+    - "db/seeds_production.rb"
