@@ -59,7 +59,11 @@ export function UserMenu() {
         render={
           <Button
             variant="ghost"
-            className="h-11 gap-2 px-2"
+            // Renders inside Header at every viewport width, unlike
+            // MobileDrawer's trigger — Header itself is dark green below lg
+            // and reverts to the normal light bg at lg+, so the hover color
+            // has to follow the same split.
+            className="h-11 gap-2 px-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground lg:hover:bg-muted lg:hover:text-foreground lg:aria-expanded:bg-muted lg:aria-expanded:text-foreground"
             aria-label="Menu do usuário"
           />
         }

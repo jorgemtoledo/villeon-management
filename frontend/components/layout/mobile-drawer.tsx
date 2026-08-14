@@ -24,7 +24,15 @@ export function MobileDrawer() {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
-          <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu" />
+          <Button
+            variant="ghost"
+            size="icon"
+            // Only ever visible below lg (this whole trigger is lg:hidden),
+            // where Header is styled dark green — no need for a lg: hover
+            // fallback, unlike UserMenu's trigger which renders at all sizes.
+            className="lg:hidden hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            aria-label="Abrir menu"
+          />
         }
       >
         <Menu className="size-5" aria-hidden="true" />
