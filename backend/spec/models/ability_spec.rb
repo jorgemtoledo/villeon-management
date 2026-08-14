@@ -137,4 +137,24 @@ RSpec.describe Ability do
       expect(ability.can?(:update_priority, ProductStock.new(product: build_stubbed(:product)))).to be false
     end
   end
+
+  describe "Histórico de Estoque authorization (Bloco Histórico)" do
+    it "admin can view it via manage :all" do
+      ability = described_class.new(build(:user, role: "admin"))
+
+      expect(ability.can?(:index, StockAuditEntry)).to be true
+    end
+
+    it "manager can view it, unconditionally (not sector-scoped)" do
+      ability = described_class.new(build(:user, role: "manager", all_sectors: false))
+
+      expect(ability.can?(:index, StockAuditEntry)).to be true
+    end
+
+    it "operator cannot view it, even with all_sectors" do
+      ability = described_class.new(build(:user, role: "operator", all_sectors: true))
+
+      expect(ability.can?(:index, StockAuditEntry)).to be false
+    end
+  end
 end

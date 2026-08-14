@@ -71,3 +71,13 @@ export function canEditStockPriority(
   if (alreadyConfigured) return false;
   return sectorId != null && hasSectorAccess(user, sectorId);
 }
+
+// Histórico de Estoque (Bloco Histórico): mirrors Ability's
+// `can %i[index], StockAuditEntry if user.manager?` (admin already covered
+// by manage :all) exactly. Not sector-scoped, same shape as
+// canManagePurchases above. The client asked for "só Felipe e Fran"; role
+// (admin/manager) was confirmed as the right proxy — see the Bloco
+// Histórico report.
+export function canViewStockHistory(user: AuthUser | null | undefined): boolean {
+  return isAdmin(user) || user?.role === "manager";
+}

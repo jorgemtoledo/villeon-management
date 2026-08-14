@@ -10,12 +10,13 @@ interface StockCardsProps {
   rows: ProductStock[];
   onCount: (row: ProductStock) => void;
   onConfigurePriority: (row: ProductStock) => void;
+  onViewHistory?: (row: ProductStock) => void;
 }
 
 // Mobile only (<md / 768px) — a 9-column table doesn't fit a phone screen
 // without horizontal scroll, so it becomes a stacked card list here instead
 // of the StockTable used on md+.
-export function StockCards({ rows, onCount, onConfigurePriority }: StockCardsProps) {
+export function StockCards({ rows, onCount, onConfigurePriority, onViewHistory }: StockCardsProps) {
   return (
     <div className="flex flex-col gap-3 md:hidden">
       {rows.map((row) => (
@@ -48,9 +49,21 @@ export function StockCards({ rows, onCount, onConfigurePriority }: StockCardsPro
               <StockPurchaseConfigCell row={row} onConfigure={onConfigurePriority} />
             </div>
 
-            <Button type="button" variant="outline" className="h-11 w-full" onClick={() => onCount(row)}>
-              {row.status === "nao_contado" ? "Contar" : "Atualizar contagem"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 flex-1"
+                onClick={() => onCount(row)}
+              >
+                {row.status === "nao_contado" ? "Contar" : "Atualizar contagem"}
+              </Button>
+              {onViewHistory ? (
+                <Button type="button" variant="ghost" className="h-11" onClick={() => onViewHistory(row)}>
+                  Histórico
+                </Button>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
       ))}

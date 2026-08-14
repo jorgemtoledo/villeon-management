@@ -10,12 +10,15 @@ interface StockTableProps {
   rows: ProductStock[];
   onCount: (row: ProductStock) => void;
   onConfigurePriority: (row: ProductStock) => void;
+  // undefined = hide the column entirely (operator/manager without access —
+  // see /estoque's page-level canViewStockHistory check).
+  onViewHistory?: (row: ProductStock) => void;
 }
 
 // Desktop/tablet only (≥md / 768px) — see StockCards for the mobile
 // equivalent. Every number here comes straight from StockCalculator via the
 // API — nothing is recomputed client-side.
-export function StockTable({ rows, onCount, onConfigurePriority }: StockTableProps) {
+export function StockTable({ rows, onCount, onConfigurePriority, onViewHistory }: StockTableProps) {
   return (
     <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
       <Table>
@@ -32,6 +35,7 @@ export function StockTable({ rows, onCount, onConfigurePriority }: StockTablePro
             <TableHead>Configuração de compra</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Contagem</TableHead>
+            {onViewHistory ? <TableHead>Histórico</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -56,6 +60,19 @@ export function StockTable({ rows, onCount, onConfigurePriority }: StockTablePro
                   {row.status === "nao_contado" ? "Contar" : "Atualizar"}
                 </Button>
               </TableCell>
+              {onViewHistory ? (
+                <TableCell>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-11 md:h-9"
+                    onClick={() => onViewHistory(row)}
+                  >
+                    Histórico
+                  </Button>
+                </TableCell>
+              ) : null}
             </TableRow>
           ))}
         </TableBody>

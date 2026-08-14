@@ -29,6 +29,7 @@ Rails.application.routes.draw do
           patch :priority, to: "product_stocks#update_priority"
         end
         resources :stock_counts, only: %i[create], controller: "stock_counts"
+        resources :stock_audit_entries, only: %i[index], controller: "stock_audit_entries"
         resources :suppliers, only: %i[index create destroy], controller: "product_suppliers" do
           member do
             patch :prefer
@@ -38,6 +39,11 @@ Rails.application.routes.draw do
 
       resources :product_stocks, only: %i[index], controller: "product_stocks"
       resources :stock_counts, only: %i[update], controller: "stock_counts"
+      resources :stock_audit_entries, only: %i[index], controller: "stock_audit_entries" do
+        collection do
+          get :users
+        end
+      end
 
       resources :suppliers, only: %i[index show create update] do
         member do

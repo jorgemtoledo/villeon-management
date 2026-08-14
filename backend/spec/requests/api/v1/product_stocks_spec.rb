@@ -370,6 +370,106 @@ RSpec.describe "Api::V1::ProductStocks", type: :request do
 
       expect(response).to have_http_status(:unauthorized)
     end
+
+    describe "auditing priority/needs_advance_order changes (Bloco Histórico)" do
+      it "logs priority null -> value" do
+        product = create(:product, sector: cozinha)
+
+        expect {
+          patch "/api/v1/products/#{product.id}/stock/priority",
+                params: { product_stock: { priority: "critical" } },
+                headers: auth_headers(luiz)
+        }.to change(StockAuditEntry, :count).by(1)
+
+        entry = StockAuditEntry.last
+        expect(entry.field).to eq("priority")
+        expect(entry.previous_value).to be_nil
+        expect(entry.new_value).to eq("critical")
+        expect(entry.user).to eq(luiz)
+        expect(entry.product).to eq(product)
+      end
+
+      it "logs priority value -> another value" do
+        product = create(:product, sector: cozinha)
+        product.create_product_stock!(priority: "critical")
+
+        patch "/api/v1/products/#{product.id}/stock/priority",
+              params: { product_stock: { priority: "normal" } },
+              headers: auth_headers(fran)
+
+        entry = StockAuditEntry.where(field: "priority").last
+        expect(entry.previous_value).to eq("critical")
+        expect(entry.new_value).to eq("normal")
+      end
+
+      it "logs needs_advance_order null -> true" do
+        product = create(:product, sector: cozinha)
+
+        patch "/api/v1/products/#{product.id}/stock/priority",
+              params: { product_stock: { needs_advance_order: true } },
+              headers: auth_headers(luiz)
+
+        entry = StockAuditEntry.where(field: "needs_advance_order").last
+        expect(entry.previous_value).to be_nil
+        expect(entry.new_value).to eq("true")
+      end
+
+      it "logs needs_advance_order true -> false" do
+        product = create(:product, sector: cozinha)
+        product.create_product_stock!(needs_advance_order: true)
+
+        patch "/api/v1/products/#{product.id}/stock/priority",
+              params: { product_stock: { needs_advance_order: false } },
+              headers: auth_headers(fran)
+
+        entry = StockAuditEntry.where(field: "needs_advance_order").last
+        expect(entry.previous_value).to eq("true")
+        expect(entry.new_value).to eq("false")
+      end
+
+      it "logs both fields as separate entries when both change in the same request" do
+        product = create(:product, sector: cozinha)
+
+        expect {
+          patch "/api/v1/products/#{product.id}/stock/priority",
+                params: { product_stock: { priority: "critical", needs_advance_order: true } },
+                headers: auth_headers(luiz)
+        }.to change(StockAuditEntry, :count).by(2)
+
+        expect(StockAuditEntry.pluck(:field)).to contain_exactly("priority", "needs_advance_order")
+      end
+
+      it "does not create an entry for a field that wasn't sent" do
+        product = create(:product, sector: cozinha)
+
+        patch "/api/v1/products/#{product.id}/stock/priority",
+              params: { product_stock: { priority: "critical" } },
+              headers: auth_headers(luiz)
+
+        expect(StockAuditEntry.where(field: "needs_advance_order")).to be_empty
+      end
+
+      it "does not create an entry when the request is denied (locked field)" do
+        product = create(:product, sector: cozinha)
+        product.create_product_stock!(priority: "normal")
+
+        expect {
+          patch "/api/v1/products/#{product.id}/stock/priority",
+                params: { product_stock: { priority: "critical" } },
+                headers: auth_headers(luiz)
+        }.not_to change(StockAuditEntry, :count)
+      end
+
+      it "does not create an entry when the update is rejected (invalid value)" do
+        product = create(:product, sector: cozinha)
+
+        expect {
+          patch "/api/v1/products/#{product.id}/stock/priority",
+                params: { product_stock: { priority: "urgent" } },
+                headers: auth_headers(admin)
+        }.not_to change(StockAuditEntry, :count)
+      end
+    end
   end
 
   describe "GET /api/v1/product_stocks" do

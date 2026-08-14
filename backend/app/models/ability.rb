@@ -60,6 +60,18 @@ class Ability
       elsif user.sector_ids.any?
         can :update_priority, ProductStock, product: { sector_id: user.sector_ids }
       end
+
+      # Histórico de Estoque (Bloco Histórico): admin (via manage :all above)
+      # and manager only — explicitly NOT every user with all_sectors=true,
+      # and NOT sector-scoped (same "any sector, unconditional" shape as
+      # Purchase/update_priority above for manager). The client asked for
+      # "só Felipe e Fran"; `role: admin`/`role: manager` was confirmed with
+      # the client as the right proxy after checking there's no dedicated
+      # per-user flag for this — see the Bloco Histórico report for the
+      # analysis (both admin and manager roles currently have more than one
+      # real account, e.g. test fixtures, so this is intentionally coarser
+      # than "only these two specific people").
+      can %i[index], StockAuditEntry if user.manager?
     end
   end
 end

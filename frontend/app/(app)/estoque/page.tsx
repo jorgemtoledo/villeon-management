@@ -3,13 +3,14 @@
 import { useState } from "react";
 
 import { useAuth } from "@/hooks/use-auth";
-import { allowedSectors } from "@/lib/auth/permissions";
+import { allowedSectors, canViewStockHistory } from "@/lib/auth/permissions";
 import { useProductStocks } from "@/hooks/use-product-stocks";
 import { Pagination } from "@/components/shared/pagination";
 import { StockSectorSelect } from "@/components/stock/stock-sector-select";
 import { StockTable } from "@/components/stock/stock-table";
 import { StockCards } from "@/components/stock/stock-cards";
 import { StockCountSheet } from "@/components/stock/stock-count-sheet";
+import { StockHistorySheet } from "@/components/stock/stock-history-sheet";
 import {
   StockEmptyState,
   StockErrorState,
@@ -23,10 +24,12 @@ const PER_PAGE = 25;
 export default function EstoquePage() {
   const { user } = useAuth();
   const sectors = allowedSectors(user);
+  const canViewHistory = canViewStockHistory(user);
 
   const [ sectorId, setSectorId ] = useState<number | undefined>(sectors[0]?.id);
   const [ page, setPage ] = useState(1);
   const [ countTarget, setCountTarget ] = useState<ProductStock | undefined>(undefined);
+  const [ historyTarget, setHistoryTarget ] = useState<ProductStock | undefined>(undefined);
   // Bloco 6G Parte 4.1: "Configuração de compra" opens the same Sheet but
   // straight to the priority step (row is already status "comprar" — that's
   // the only time this column is clickable — so there's nothing to count).
@@ -77,8 +80,18 @@ export default function EstoquePage() {
               <StockEmptyState />
             ) : (
               <div className={isPlaceholderData ? "opacity-60 transition-opacity" : undefined}>
-                <StockTable rows={data.data} onCount={handleCount} onConfigurePriority={handleConfigurePriority} />
-                <StockCards rows={data.data} onCount={handleCount} onConfigurePriority={handleConfigurePriority} />
+                <StockTable
+                  rows={data.data}
+                  onCount={handleCount}
+                  onConfigurePriority={handleConfigurePriority}
+                  onViewHistory={canViewHistory ? setHistoryTarget : undefined}
+                />
+                <StockCards
+                  rows={data.data}
+                  onCount={handleCount}
+                  onConfigurePriority={handleConfigurePriority}
+                  onViewHistory={canViewHistory ? setHistoryTarget : undefined}
+                />
                 <Pagination meta={data.meta} onPageChange={setPage} itemLabel="produtos" />
               </div>
             )
@@ -96,6 +109,14 @@ export default function EstoquePage() {
         }}
         row={countTarget}
         openToPriority={openToPriority}
+      />
+
+      <StockHistorySheet
+        open={historyTarget !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setHistoryTarget(undefined);
+        }}
+        product={historyTarget?.product}
       />
     </div>
   );

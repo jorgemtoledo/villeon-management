@@ -73,6 +73,9 @@ module Api
         authorize! :update_priority, stock
         raise CanCan::AccessDenied if locked_for_current_user?(stock)
 
+        previous_priority = stock.priority
+        previous_advance_order = stock.needs_advance_order
+
         begin
           stock.assign_attributes(priority_params)
         rescue ArgumentError
@@ -80,6 +83,7 @@ module Api
         end
 
         if stock.errors.empty? && stock.save
+          record_priority_audit!(stock, previous_priority, previous_advance_order)
           render json: ProductStockSerializer.call(@product), status: :ok
         else
           render_unprocessable(stock)
@@ -87,6 +91,25 @@ module Api
       end
 
       private
+
+      # Bloco Histórico: one entry per field that actually changed — a save
+      # that only touches one of the two (or neither, e.g. re-saving the same
+      # values) never creates a fake entry for the untouched field, since
+      # `saved_change_to_*?` only reflects a real value change.
+      def record_priority_audit!(stock, previous_priority, previous_advance_order)
+        if stock.saved_change_to_priority?
+          StockAuditEntry.create!(product: @product, user: current_user, field: "priority",
+                                    previous_value: previous_priority, new_value: stock.priority)
+        end
+
+        return unless stock.saved_change_to_needs_advance_order?
+
+        StockAuditEntry.create!(
+          product: @product, user: current_user, field: "needs_advance_order",
+          previous_value: previous_advance_order.nil? ? nil : previous_advance_order.to_s,
+          new_value: stock.needs_advance_order.nil? ? nil : stock.needs_advance_order.to_s
+        )
+      end
 
       # Only admin/manager can touch a value someone already saved — an
       # unsaved (never-configured) stock, or one where both fields are still

@@ -18,6 +18,25 @@ class StockCount < ApplicationRecord
     return unless latest
 
     stock = product.product_stock || product.build_product_stock
+    previous_quantity = stock.current_quantity
     stock.update!(current_quantity: latest.quantity)
+
+    record_current_quantity_audit!(stock, previous_quantity, latest.user) if stock.saved_change_to_current_quantity?
+  end
+
+  # Bloco Histórico: only when the value actually changed (dirty tracking
+  # already skips this when a new count just confirms the same quantity —
+  # "Estoque atual = 10, Nova contagem = 10" must never create a fake entry).
+  # Attributed to *this* count's user, not necessarily the currently
+  # authenticated request — correct either way since a StockCount can only
+  # ever be created/edited by the user who owns it.
+  def record_current_quantity_audit!(stock, previous_quantity, acting_user)
+    StockAuditEntry.create!(
+      product: product,
+      user: acting_user,
+      field: "current_quantity",
+      previous_value: previous_quantity&.to_s,
+      new_value: stock.current_quantity.to_s
+    )
   end
 end
