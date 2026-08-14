@@ -34,4 +34,5 @@
 # Generated from real business data (pricing, suppliers) — never committed,
 # copied to each environment manually (e.g. scp), same as config/master.key.
 /db/seeds_production.rb
+/db/seeds_product_suppliers.rb
 
