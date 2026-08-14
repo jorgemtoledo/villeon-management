@@ -55,3 +55,19 @@ export function hasSectorAccess(user: AuthUser | null | undefined, sectorId: num
 export function allowedSectors(user: AuthUser | null | undefined): SectorOption[] {
   return SECTORS.filter((sector) => hasSectorAccess(user, sector.id));
 }
+
+// Priority/needs_advance_order (Bloco 6G Parte 4) — mirrors Ability's
+// update_priority rule + ProductStocksController#locked_for_current_user?
+// exactly: admin/manager always, any sector; a sector-authorized operator
+// only the *first* time (never once alreadyConfigured is true). UX-only,
+// same caveat as the rest of this file — the backend re-checks all of this
+// independently and is the only real authority.
+export function canEditStockPriority(
+  user: AuthUser | null | undefined,
+  sectorId: number | null | undefined,
+  alreadyConfigured: boolean,
+): boolean {
+  if (isAdmin(user) || user?.role === "manager") return true;
+  if (alreadyConfigured) return false;
+  return sectorId != null && hasSectorAccess(user, sectorId);
+}

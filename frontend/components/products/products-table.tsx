@@ -7,6 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { LastPurchaseCell } from "@/components/products/last-purchase-cell";
 import { ProductStatusActions } from "@/components/products/product-status-actions";
 import { ProductSuppliersCell } from "@/components/products/product-suppliers-cell";
 import type { Product } from "@/types/product";
@@ -34,9 +35,11 @@ export function ProductsTable({ products, canManage, onEdit }: ProductsTableProp
             <TableHead>Produto</TableHead>
             <TableHead>Código</TableHead>
             <TableHead>Setor</TableHead>
+            <TableHead>Subcategoria</TableHead>
             <TableHead>Unid. compra</TableHead>
             <TableHead>Unid. estoque</TableHead>
             <TableHead>Fornecedores</TableHead>
+            <TableHead>Última compra</TableHead>
             <TableHead>Status</TableHead>
             {canManage ? <TableHead>Ações</TableHead> : null}
           </TableRow>
@@ -47,10 +50,14 @@ export function ProductsTable({ products, canManage, onEdit }: ProductsTableProp
               <TableCell className="font-medium">{product.name}</TableCell>
               <TableCell className="text-muted-foreground">{product.code}</TableCell>
               <TableCell>{product.sector?.name ?? "—"}</TableCell>
+              <TableCell>{product.subcategory?.code ?? "—"}</TableCell>
               <TableCell>{product.purchase_unit?.abbreviation ?? "—"}</TableCell>
               <TableCell>{product.stock_unit?.abbreviation ?? "—"}</TableCell>
               <TableCell onClick={(event) => event.stopPropagation()}>
                 <ProductSuppliersCell productId={product.id} count={product.product_suppliers_count} />
+              </TableCell>
+              <TableCell>
+                <LastPurchaseCell product={product} />
               </TableCell>
               <TableCell>
                 <Badge variant={product.active ? "default" : "secondary"}>

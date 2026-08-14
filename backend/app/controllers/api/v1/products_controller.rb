@@ -17,9 +17,16 @@ module Api
 
         pagy, products = pagy(scope, limit: per_page_param)
         counts = product_suppliers_counts_for(products)
+        last_purchases = last_purchases_for(products)
 
         render json: {
-          data: products.map { |product| ProductSerializer.call(product, product_suppliers_count: counts.fetch(product.id, 0)) },
+          data: products.map do |product|
+            ProductSerializer.call(
+              product,
+              product_suppliers_count: counts.fetch(product.id, 0),
+              last_purchase: last_purchases[product.id]
+            )
+          end,
           meta: pagination_meta(pagy)
         }, status: :ok
       end
@@ -27,7 +34,11 @@ module Api
       def show
         authorize! :show, @product
 
-        render json: ProductSerializer.call(@product, product_suppliers_count: @product.product_suppliers.count), status: :ok
+        render json: ProductSerializer.call(
+          @product,
+          product_suppliers_count: @product.product_suppliers.count,
+          last_purchase: last_purchases_for([ @product ])[@product.id]
+        ), status: :ok
       end
 
       def create
@@ -36,7 +47,10 @@ module Api
         product = Product.new(product_params)
 
         if product.save
-          render json: ProductSerializer.call(product, product_suppliers_count: 0), status: :created
+          # A brand-new product has no purchases yet — last_purchases_for
+          # would correctly return nil too, but skipping the query entirely
+          # is simpler and exactly as correct here.
+          render json: ProductSerializer.call(product, product_suppliers_count: 0, last_purchase: nil), status: :created
         else
           render_unprocessable(product)
         end
@@ -46,7 +60,11 @@ module Api
         authorize! :update, @product
 
         if @product.update(product_params)
-          render json: ProductSerializer.call(@product, product_suppliers_count: @product.product_suppliers.count), status: :ok
+          render json: ProductSerializer.call(
+            @product,
+            product_suppliers_count: @product.product_suppliers.count,
+            last_purchase: last_purchases_for([ @product ])[@product.id]
+          ), status: :ok
         else
           render_unprocessable(@product)
         end
@@ -56,14 +74,22 @@ module Api
         authorize! :activate, @product
         @product.update!(active: true)
 
-        render json: ProductSerializer.call(@product, product_suppliers_count: @product.product_suppliers.count), status: :ok
+        render json: ProductSerializer.call(
+          @product,
+          product_suppliers_count: @product.product_suppliers.count,
+          last_purchase: last_purchases_for([ @product ])[@product.id]
+        ), status: :ok
       end
 
       def deactivate
         authorize! :deactivate, @product
         @product.update!(active: false)
 
-        render json: ProductSerializer.call(@product, product_suppliers_count: @product.product_suppliers.count), status: :ok
+        render json: ProductSerializer.call(
+          @product,
+          product_suppliers_count: @product.product_suppliers.count,
+          last_purchase: last_purchases_for([ @product ])[@product.id]
+        ), status: :ok
       end
 
       private
@@ -91,6 +117,7 @@ module Api
 
       def apply_filters(scope)
         scope = scope.where(sector_id: params[:sector_id]) if params[:sector_id].present?
+        scope = scope.where(subcategory_id: params[:subcategory_id]) if params[:subcategory_id].present?
 
         if params[:active].present?
           scope = scope.where(active: ActiveModel::Type::Boolean.new.cast(params[:active]))
@@ -120,6 +147,34 @@ module Api
       # — same reasoning/shape as SuppliersController#products_counts_for.
       def product_suppliers_counts_for(products)
         ProductSupplier.where(product_id: products.map(&:id)).group(:product_id).count
+      end
+
+      # Reproduces the source spreadsheet's "Preço/Data últ. compra" columns
+      # (T/U in "Catálogo Mestre") exactly — see the Bloco 6H.4 analysis.
+      # Those are formulas that pick the *last row entered* in the Histórico
+      # sheet for a product, which is NOT the same as "the row with the
+      # latest date": 171 product+date combinations in the real data have
+      # more than one purchase on the same day, and 84 of those have
+      # different prices between the tied rows — purchased_at alone would
+      # pick an arbitrary one of them. DISTINCT ON with `id DESC` as the
+      # tiebreaker reproduces the spreadsheet's answer exactly (verified
+      # directly against the real data, including cross-supplier ties) — id
+      # order is the app's equivalent of "which row was entered more
+      # recently" now that the spreadsheet isn't the system of record.
+      #
+      # One query total regardless of how many products are passed in — safe
+      # to call with the whole paginated page (avoids N+1) or with a single
+      # product (show/create/update/activate/deactivate), never per-row.
+      def last_purchases_for(products)
+        PurchaseItem
+          .joins(:purchase)
+          .where(product_id: products.map(&:id))
+          .select(
+            "DISTINCT ON (purchase_items.product_id) purchase_items.product_id, " \
+            "purchase_items.unit_price, purchases.purchased_at"
+          )
+          .order("purchase_items.product_id, purchases.purchased_at DESC, purchase_items.id DESC")
+          .index_by(&:product_id)
       end
     end
   end

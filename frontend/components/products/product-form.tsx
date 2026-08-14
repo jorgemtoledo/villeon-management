@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import { useUnits } from "@/hooks/use-units";
+import { useSubcategories } from "@/hooks/use-subcategories";
 import { SECTORS } from "@/lib/constants/sectors";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
@@ -25,13 +26,21 @@ import type { Product, ProductInput } from "@/types/product";
 
 // Mirrors Api::V1::ProductsController#product_params exactly — same fields,
 // same required/optional split as the backend (see Product model
-// validations). category_id/subcategory_id are intentionally absent: 0
-// Category/Subcategory rows exist today (taxonomy not yet confirmed with
-// the client), so there's nothing real to select.
+// validations). category_id is intentionally absent: 0 Category rows exist
+// today (that taxonomy isn't confirmed with the client). subcategory_id
+// IS present — it's the client's own flat "Subcategoria" code list (Bloco
+// Subcategoria), a real, already-imported reference table, unlike Category.
 const productSchema = z.object({
   name: z.string().min(1, "Informe o nome."),
   code: z.string().min(1, "Informe o código."),
   sector_id: z.coerce.number({ error: "Selecione o setor." }).int().positive("Selecione o setor."),
+  // Optional — "" (nothing selected/cleared) preprocesses to undefined
+  // rather than coercing to NaN/0, same reasoning as PurchaseForm's
+  // requiredCoercedNumber, just optional instead of required here.
+  subcategory_id: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.coerce.number().int().positive().optional(),
+  ),
   purchase_unit_id: z.coerce
     .number({ error: "Selecione a unidade de compra." })
     .int()
@@ -72,6 +81,8 @@ export function ProductForm({
 }: ProductFormProps) {
   const { data: unitsData, isPending: unitsPending } = useUnits();
   const units = unitsData?.data ?? [];
+  const { data: subcategoriesData, isPending: subcategoriesPending } = useSubcategories();
+  const subcategories = subcategoriesData?.data ?? [];
 
   const form = useForm<ProductFormInput, unknown, ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -79,6 +90,7 @@ export function ProductForm({
       name: product?.name ?? "",
       code: product?.code ?? "",
       sector_id: product?.sector?.id,
+      subcategory_id: product?.subcategory?.id,
       purchase_unit_id: product?.purchase_unit?.id,
       stock_unit_id: product?.stock_unit?.id,
       conversion_factor: product?.conversion_factor ?? 1,
@@ -91,6 +103,7 @@ export function ProductForm({
       name: values.name,
       code: values.code,
       sector_id: values.sector_id,
+      subcategory_id: values.subcategory_id ?? null,
       purchase_unit_id: values.purchase_unit_id,
       stock_unit_id: values.stock_unit_id,
       conversion_factor: values.conversion_factor,
@@ -164,6 +177,46 @@ export function ProductForm({
               )}
             />
             <FieldError errors={[form.formState.errors.sector_id]} />
+          </FieldContent>
+        </Field>
+
+        <Field data-invalid={!!form.formState.errors.subcategory_id}>
+          <FieldLabel htmlFor="subcategory_id">Subcategoria</FieldLabel>
+          <FieldContent>
+            <Controller
+              control={form.control}
+              name="subcategory_id"
+              render={({ field }) => (
+                <Select
+                  value={field.value !== undefined ? String(field.value) : ""}
+                  onValueChange={(value) => field.onChange(value === "" ? undefined : Number(value))}
+                  disabled={readOnly || subcategoriesPending}
+                  items={{
+                    "": "Sem subcategoria",
+                    ...Object.fromEntries(
+                      subcategories.map((subcategory) => [String(subcategory.id), subcategory.code]),
+                    ),
+                  }}
+                >
+                  <SelectTrigger
+                    id="subcategory_id"
+                    className="h-11 w-full md:h-9"
+                    aria-invalid={!!form.formState.errors.subcategory_id}
+                  >
+                    <SelectValue placeholder={subcategoriesPending ? "Carregando..." : "Sem subcategoria"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Sem subcategoria</SelectItem>
+                    {subcategories.map((subcategory) => (
+                      <SelectItem key={subcategory.id} value={String(subcategory.id)}>
+                        {subcategory.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            <FieldError errors={[form.formState.errors.subcategory_id]} />
           </FieldContent>
         </Field>
 

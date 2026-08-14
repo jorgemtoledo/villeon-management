@@ -6,6 +6,7 @@ function buildQueryString(query: ProductsQuery): string {
 
   if (query.q) params.set("q", query.q);
   if (query.sectorId) params.set("sector_id", String(query.sectorId));
+  if (query.subcategoryId) params.set("subcategory_id", String(query.subcategoryId));
   if (query.active !== undefined) params.set("active", String(query.active));
   if (query.page) params.set("page", String(query.page));
   if (query.perPage) params.set("per_page", String(query.perPage));

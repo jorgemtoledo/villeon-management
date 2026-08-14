@@ -1,4 +1,4 @@
-import type { StockStatus } from "@/types/product-stock";
+import type { StockPriority, StockStatus } from "@/types/product-stock";
 
 // Mirrors StockCalculator's four possible values exactly — never invent a
 // fifth state here, the backend is the only source of truth for status.
@@ -15,3 +15,11 @@ export const STOCK_STATUS_BADGE_VARIANT: Record<StockStatus, "secondary" | "outl
   comprar: "destructive",
   inativo: "secondary",
 };
+
+// Mirrors ProductStock#priority's three values exactly (Bloco 6G Parte 4).
+export const STOCK_PRIORITY_LABEL: Record<StockPriority, string> = {
+  critical: "Crítico",
+  normal: "Normal",
+  low: "Baixa",
+};
+

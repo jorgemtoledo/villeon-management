@@ -52,6 +52,42 @@ RSpec.describe ProductStock, type: :model do
     }.to raise_error(ActiveRecord::StatementInvalid, /product_stocks_current_quantity_check/)
   end
 
+  describe "priority" do
+    it "accepts the three valid values" do
+      %w[critical normal low].each do |value|
+        stock = build(:product_stock, priority: value)
+        expect(stock).to be_valid
+      end
+    end
+
+    it "is nil by default (never configured)" do
+      stock = create(:product_stock)
+
+      expect(stock.priority).to be_nil
+    end
+
+    it "rejects an invalid value at the database level as defense in depth" do
+      stock = create(:product_stock)
+
+      expect {
+        stock.update_column(:priority, "urgent")
+      }.to raise_error(ActiveRecord::StatementInvalid, /product_stocks_priority_check/)
+    end
+  end
+
+  describe "needs_advance_order" do
+    it "is nil by default (never configured), distinct from explicitly false" do
+      stock = create(:product_stock)
+
+      expect(stock.needs_advance_order).to be_nil
+    end
+
+    it "accepts true and false explicitly" do
+      expect(build(:product_stock, needs_advance_order: true)).to be_valid
+      expect(build(:product_stock, needs_advance_order: false)).to be_valid
+    end
+  end
+
   describe "ideal must not be below minimum" do
     it "is invalid when ideal is less than minimum" do
       stock = build(:product_stock, minimum_quantity: 10, ideal_quantity: 5)

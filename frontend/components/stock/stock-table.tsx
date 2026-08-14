@@ -3,17 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatStockQuantity } from "@/lib/format-quantity";
 import { STOCK_STATUS_BADGE_VARIANT, STOCK_STATUS_LABEL } from "@/lib/format-stock-status";
+import { StockPurchaseConfigCell } from "@/components/stock/stock-purchase-config-cell";
 import type { ProductStock } from "@/types/product-stock";
 
 interface StockTableProps {
   rows: ProductStock[];
   onCount: (row: ProductStock) => void;
+  onConfigurePriority: (row: ProductStock) => void;
 }
 
 // Desktop/tablet only (≥md / 768px) — see StockCards for the mobile
 // equivalent. Every number here comes straight from StockCalculator via the
 // API — nothing is recomputed client-side.
-export function StockTable({ rows, onCount }: StockTableProps) {
+export function StockTable({ rows, onCount, onConfigurePriority }: StockTableProps) {
   return (
     <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
       <Table>
@@ -27,6 +29,7 @@ export function StockTable({ rows, onCount }: StockTableProps) {
             <TableHead className="text-right">Ideal</TableHead>
             <TableHead className="text-right">Reposição</TableHead>
             <TableHead className="text-right">Comprar</TableHead>
+            <TableHead>Configuração de compra</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Contagem</TableHead>
           </TableRow>
@@ -42,6 +45,9 @@ export function StockTable({ rows, onCount }: StockTableProps) {
               <TableCell className="text-right">{formatStockQuantity(row.ideal_quantity)}</TableCell>
               <TableCell className="text-right">{formatStockQuantity(row.replenishment_quantity)}</TableCell>
               <TableCell className="text-right">{row.purchase_quantity ?? "—"}</TableCell>
+              <TableCell>
+                <StockPurchaseConfigCell row={row} onConfigure={onConfigurePriority} />
+              </TableCell>
               <TableCell>
                 <Badge variant={STOCK_STATUS_BADGE_VARIANT[row.status]}>{STOCK_STATUS_LABEL[row.status]}</Badge>
               </TableCell>

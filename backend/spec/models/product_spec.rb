@@ -57,6 +57,21 @@ RSpec.describe Product, type: :model do
     expect(product).to be_valid
   end
 
+  describe "subcategory" do
+    it "allows creating a product without a subcategory (Bloco Subcategoria — ~260 of 530 real products have none)" do
+      product = build(:product, subcategory: nil)
+
+      expect(product).to be_valid
+    end
+
+    it "never auto-creates a Subcategory row for a code that doesn't already exist" do
+      product = build(:product, subcategory_id: -1)
+
+      expect { product.save }.to raise_error(ActiveRecord::InvalidForeignKey)
+      expect(Subcategory.count).to eq(0)
+    end
+  end
+
   describe "colibri_code" do
     it "is not required to be unique, since the client's data isn't reliable yet" do
       create(:product, colibri_code: "65")

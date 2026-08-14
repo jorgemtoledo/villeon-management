@@ -97,6 +97,47 @@ RSpec.describe "Api::V1::Products", type: :request do
         expect(ids).to contain_exactly(in_bar.id)
       end
 
+      it "filters by subcategory_id" do
+        pro = create(:subcategory, code: "PRO")
+        acu = create(:subcategory, code: "ACU")
+        in_pro = create(:product, subcategory: pro)
+        create(:product, subcategory: acu)
+        create(:product, subcategory: nil)
+
+        get "/api/v1/products", params: { subcategory_id: pro.id }, headers: auth_headers(admin)
+
+        ids = JSON.parse(response.body)["data"].map { |p| p["id"] }
+        expect(ids).to contain_exactly(in_pro.id)
+      end
+
+      it "combines subcategory_id with sector_id and active" do
+        cozinha = create(:sector)
+        bar = create(:sector)
+        pro = create(:subcategory, code: "PRO")
+        matching = create(:product, sector: cozinha, subcategory: pro, active: true)
+        create(:product, sector: bar, subcategory: pro, active: true) # wrong sector
+        create(:product, sector: cozinha, subcategory: pro, active: false) # inactive
+        create(:product, sector: cozinha, subcategory: nil, active: true) # no subcategory
+
+        get "/api/v1/products",
+            params: { sector_id: cozinha.id, subcategory_id: pro.id, active: "true" },
+            headers: auth_headers(admin)
+
+        ids = JSON.parse(response.body)["data"].map { |p| p["id"] }
+        expect(ids).to contain_exactly(matching.id)
+      end
+
+      it "combines subcategory_id with search by name/code" do
+        pro = create(:subcategory, code: "PRO")
+        matching = create(:product, name: "Cupim bovino", code: "COZ-777", subcategory: pro)
+        create(:product, name: "Cupim de outro tipo", code: "COZ-778", subcategory: nil)
+
+        get "/api/v1/products", params: { q: "Cupim", subcategory_id: pro.id }, headers: auth_headers(admin)
+
+        ids = JSON.parse(response.body)["data"].map { |p| p["id"] }
+        expect(ids).to contain_exactly(matching.id)
+      end
+
       it "filters by active status" do
         active_product = create(:product, active: true)
         inactive_product = create(:product, active: false)
@@ -139,6 +180,121 @@ RSpec.describe "Api::V1::Products", type: :request do
         expect(response).to have_http_status(:ok)
         expect(JSON.parse(response.body)["data"].map { |p| p["name"] }).to eq(%w[Abacaxi Zebra])
       end
+    end
+  end
+
+  describe "last_purchase_price / last_purchase_date (Bloco 6H.4)" do
+    def counts_queries_on(table)
+      count = 0
+      subscriber = lambda do |*, payload|
+        count += 1 if payload[:sql].include?(table) && payload[:sql] =~ /\ASELECT/i
+      end
+      ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { yield }
+      count
+    end
+
+    it "returns null for a product that was never purchased" do
+      product = create(:product)
+
+      get "/api/v1/products/#{product.id}", headers: auth_headers(admin)
+
+      body = JSON.parse(response.body)
+      expect(body["last_purchase_price"]).to be_nil
+      expect(body["last_purchase_date"]).to be_nil
+    end
+
+    it "returns the price/date of the single purchase for a product with one" do
+      product = create(:product)
+      purchase = create(:purchase, purchased_at: Date.new(2026, 3, 1))
+      create(:purchase_item, product: product, purchase: purchase, unit_price: 12.5)
+
+      get "/api/v1/products/#{product.id}", headers: auth_headers(admin)
+
+      body = JSON.parse(response.body)
+      expect(BigDecimal(body["last_purchase_price"])).to eq(BigDecimal("12.5"))
+      expect(Date.parse(body["last_purchase_date"])).to eq(Date.new(2026, 3, 1))
+    end
+
+    it "picks the most recent purchase (by date) when there are several on different dates" do
+      product = create(:product)
+      old_purchase = create(:purchase, purchased_at: Date.new(2026, 1, 1))
+      new_purchase = create(:purchase, purchased_at: Date.new(2026, 6, 1))
+      create(:purchase_item, product: product, purchase: old_purchase, unit_price: 10)
+      create(:purchase_item, product: product, purchase: new_purchase, unit_price: 20)
+
+      get "/api/v1/products/#{product.id}", headers: auth_headers(admin)
+
+      body = JSON.parse(response.body)
+      expect(BigDecimal(body["last_purchase_price"])).to eq(BigDecimal("20"))
+      expect(Date.parse(body["last_purchase_date"])).to eq(Date.new(2026, 6, 1))
+    end
+
+    it "picks a real row among several purchases on the same date (date alone doesn't distinguish them)" do
+      product = create(:product)
+      purchase = create(:purchase, purchased_at: Date.new(2026, 5, 10))
+      create(:purchase_item, product: product, purchase: purchase, unit_price: 7, quantity: 1)
+      create(:purchase_item, product: product, purchase: purchase, unit_price: 7, quantity: 2)
+
+      get "/api/v1/products/#{product.id}", headers: auth_headers(admin)
+
+      body = JSON.parse(response.body)
+      expect(Date.parse(body["last_purchase_date"])).to eq(Date.new(2026, 5, 10))
+      expect(BigDecimal(body["last_purchase_price"])).to eq(BigDecimal("7"))
+    end
+
+    it "breaks a same-date tie with different prices by id DESC, matching the source spreadsheet's own tiebreak" do
+      product = create(:product)
+      purchase = create(:purchase, purchased_at: Date.new(2026, 5, 10))
+      first_item = create(:purchase_item, product: product, purchase: purchase, unit_price: 7)
+      second_item = create(:purchase_item, product: product, purchase: purchase, unit_price: 9)
+      expect(second_item.id).to be > first_item.id
+
+      get "/api/v1/products/#{product.id}", headers: auth_headers(admin)
+
+      # The higher-id item (9) must win, never the lower-id one (7) and never
+      # an arbitrary pick — this is the exact scenario (84 real cases in the
+      # source data) purchased_at alone can't resolve.
+      expect(BigDecimal(JSON.parse(response.body)["last_purchase_price"])).to eq(BigDecimal("9"))
+    end
+
+    it "confirms id DESC — not price, not quantity — is what decides the tie" do
+      product = create(:product)
+      purchase = create(:purchase, purchased_at: Date.new(2026, 5, 10))
+      create(:purchase_item, product: product, purchase: purchase, unit_price: 99) # highest price, created first
+      last_item = create(:purchase_item, product: product, purchase: purchase, unit_price: 1) # lowest price, created last
+
+      get "/api/v1/products/#{product.id}", headers: auth_headers(admin)
+
+      expect(BigDecimal(JSON.parse(response.body)["last_purchase_price"])).to eq(last_item.unit_price)
+    end
+
+    it "always returns price and date from the same winning PurchaseItem/Purchase, never mixed" do
+      product = create(:product)
+      early = create(:purchase, purchased_at: Date.new(2026, 1, 1))
+      late = create(:purchase, purchased_at: Date.new(2026, 5, 10))
+      create(:purchase_item, product: product, purchase: early, unit_price: 50)
+      winning_item = create(:purchase_item, product: product, purchase: late, unit_price: 30)
+
+      get "/api/v1/products/#{product.id}", headers: auth_headers(admin)
+
+      body = JSON.parse(response.body)
+      expect(BigDecimal(body["last_purchase_price"])).to eq(winning_item.unit_price)
+      expect(Date.parse(body["last_purchase_date"])).to eq(winning_item.purchase.purchased_at.to_date)
+    end
+
+    it "runs exactly one query against purchase_items for the whole product listing, regardless of page size" do
+      products = create_list(:product, 5)
+      purchase = create(:purchase, purchased_at: Date.new(2026, 5, 10))
+      products.each { |p| create(:purchase_item, product: p, purchase: purchase, unit_price: 10) }
+
+      query_count = counts_queries_on("purchase_items") do
+        get "/api/v1/products", headers: auth_headers(admin)
+      end
+
+      expect(response).to have_http_status(:ok)
+      expect(query_count).to eq(1)
+      returned = JSON.parse(response.body)["data"]
+      expect(returned.count { |p| p["last_purchase_price"].present? }).to eq(5)
     end
   end
 
@@ -191,6 +347,23 @@ RSpec.describe "Api::V1::Products", type: :request do
 
       expect(response).to have_http_status(:created)
       expect(JSON.parse(response.body)["category"]).to be_nil
+    end
+
+    it "creates a product with a subcategory and exposes it by code, not an invented name" do
+      subcategory = create(:subcategory, code: "PRO")
+      params = valid_params.deep_merge(product: { subcategory_id: subcategory.id })
+
+      post "/api/v1/products", params: params, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(JSON.parse(response.body)["subcategory"]).to eq({ "id" => subcategory.id, "code" => "PRO" })
+    end
+
+    it "creates a product without a subcategory when none is given" do
+      post "/api/v1/products", params: valid_params, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(JSON.parse(response.body)["subcategory"]).to be_nil
     end
 
     it "forbids manager from creating a product" do

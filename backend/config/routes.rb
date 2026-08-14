@@ -25,7 +25,9 @@ Rails.application.routes.draw do
           patch :deactivate
         end
 
-        resource :stock, only: %i[show update], controller: "product_stocks"
+        resource :stock, only: %i[show update], controller: "product_stocks" do
+          patch :priority, to: "product_stocks#update_priority"
+        end
         resources :stock_counts, only: %i[create], controller: "stock_counts"
         resources :suppliers, only: %i[index create destroy], controller: "product_suppliers" do
           member do
@@ -46,6 +48,7 @@ Rails.application.routes.draw do
       end
 
       resources :units, only: %i[index]
+      resources :subcategories, only: %i[index]
 
       resources :purchases, only: %i[index show create update]
 

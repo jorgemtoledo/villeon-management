@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SECTORS } from "@/lib/constants/sectors";
+import { useSubcategories } from "@/hooks/use-subcategories";
 
 export type StatusFilter = "all" | "active" | "inactive";
 
@@ -19,6 +20,8 @@ interface ProductsFiltersProps {
   onSearchChange: (value: string) => void;
   sectorId: number | undefined;
   onSectorChange: (sectorId: number | undefined) => void;
+  subcategoryId: number | undefined;
+  onSubcategoryChange: (subcategoryId: number | undefined) => void;
   status: StatusFilter;
   onStatusChange: (status: StatusFilter) => void;
 }
@@ -34,9 +37,14 @@ export function ProductsFilters({
   onSearchChange,
   sectorId,
   onSectorChange,
+  subcategoryId,
+  onSubcategoryChange,
   status,
   onStatusChange,
 }: ProductsFiltersProps) {
+  const { data: subcategoriesData, isPending: subcategoriesPending } = useSubcategories();
+  const subcategories = subcategoriesData?.data ?? [];
+
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center">
       <div className="relative flex-1">
@@ -73,6 +81,28 @@ export function ProductsFilters({
           {SECTORS.map((sector) => (
             <SelectItem key={sector.id} value={String(sector.id)}>
               {sector.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={subcategoryId ? String(subcategoryId) : "all"}
+        onValueChange={(value) => onSubcategoryChange(value === "all" ? undefined : Number(value))}
+        disabled={subcategoriesPending}
+        items={{
+          all: "Todas as subcategorias",
+          ...Object.fromEntries(subcategories.map((subcategory) => [String(subcategory.id), subcategory.code])),
+        }}
+      >
+        <SelectTrigger className="h-11 w-full md:h-9 md:w-56" aria-label="Filtrar por subcategoria">
+          <SelectValue placeholder="Todas as subcategorias" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todas as subcategorias</SelectItem>
+          {subcategories.map((subcategory) => (
+            <SelectItem key={subcategory.id} value={String(subcategory.id)}>
+              {subcategory.code}
             </SelectItem>
           ))}
         </SelectContent>

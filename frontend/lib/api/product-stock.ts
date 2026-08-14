@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api/client";
 import type {
   ProductStock,
   ProductStockConfigInput,
+  ProductStockPriorityInput,
   ProductStocksQuery,
   ProductStocksResponse,
 } from "@/types/product-stock";
@@ -31,6 +32,16 @@ export function updateProductStockConfig(
   input: ProductStockConfigInput,
 ): Promise<ProductStock> {
   return apiRequest<ProductStock>(`/api/v1/products/${productId}/stock`, {
+    method: "PATCH",
+    body: JSON.stringify({ product_stock: input }),
+  });
+}
+
+export function updateProductStockPriority(
+  productId: number,
+  input: ProductStockPriorityInput,
+): Promise<ProductStock> {
+  return apiRequest<ProductStock>(`/api/v1/products/${productId}/stock/priority`, {
     method: "PATCH",
     body: JSON.stringify({ product_stock: input }),
   });

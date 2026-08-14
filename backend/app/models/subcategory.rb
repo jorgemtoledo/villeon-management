@@ -1,6 +1,6 @@
 class Subcategory < ApplicationRecord
-  belongs_to :category
+  belongs_to :category, optional: true
   has_many :products, dependent: :restrict_with_error
 
-  validates :code, presence: true, uniqueness: { scope: :category_id }
+  validates :code, presence: true, uniqueness: true
 end

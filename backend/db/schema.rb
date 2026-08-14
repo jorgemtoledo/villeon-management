@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_11_005116) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_14_194212) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -27,12 +27,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_005116) do
     t.decimal "current_quantity", precision: 12, scale: 4, default: "0.0", null: false
     t.decimal "ideal_quantity", precision: 12, scale: 4, default: "0.0", null: false
     t.decimal "minimum_quantity", precision: 12, scale: 4, default: "0.0", null: false
+    t.boolean "needs_advance_order"
+    t.string "priority"
     t.bigint "product_id", null: false
     t.datetime "updated_at", null: false
     t.index ["product_id"], name: "index_product_stocks_on_product_id", unique: true
     t.check_constraint "current_quantity >= 0::numeric", name: "product_stocks_current_quantity_check"
     t.check_constraint "ideal_quantity >= 0::numeric", name: "product_stocks_ideal_quantity_check"
     t.check_constraint "minimum_quantity >= 0::numeric", name: "product_stocks_minimum_quantity_check"
+    t.check_constraint "priority::text = ANY (ARRAY['critical'::character varying::text, 'normal'::character varying::text, 'low'::character varying::text])", name: "product_stocks_priority_check"
   end
 
   create_table "product_suppliers", force: :cascade do |t|
@@ -123,13 +126,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_005116) do
 
   create_table "subcategories", force: :cascade do |t|
     t.boolean "active", default: true, null: false
-    t.bigint "category_id", null: false
+    t.bigint "category_id"
     t.string "code", null: false
     t.datetime "created_at", null: false
     t.string "name"
     t.datetime "updated_at", null: false
-    t.index ["category_id", "code"], name: "index_subcategories_on_category_id_and_code", unique: true
     t.index ["category_id"], name: "index_subcategories_on_category_id"
+    t.index ["code"], name: "index_subcategories_on_code", unique: true
   end
 
   create_table "suppliers", force: :cascade do |t|
@@ -179,7 +182,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_005116) do
     t.index ["jti"], name: "index_users_on_jti", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["sector_id"], name: "index_users_on_sector_id"
-    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying, 'manager'::character varying, 'operator'::character varying]::text[])", name: "users_role_check"
+    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying::text, 'manager'::character varying::text, 'operator'::character varying::text])", name: "users_role_check"
   end
 
   add_foreign_key "product_stocks", "products"

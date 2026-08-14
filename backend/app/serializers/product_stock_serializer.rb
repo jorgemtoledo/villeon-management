@@ -14,7 +14,9 @@ class ProductStockSerializer
       sector: reference(product.sector),
       purchase_unit: unit_reference(product.purchase_unit),
       stock_unit: unit_reference(product.stock_unit),
-      **StockCalculator.call(product, counted: @counted)
+      **StockCalculator.call(product, counted: @counted),
+      priority: product.product_stock&.priority,
+      needs_advance_order: product.product_stock&.needs_advance_order
     }
   end
 

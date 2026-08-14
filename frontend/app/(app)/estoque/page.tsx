@@ -27,6 +27,10 @@ export default function EstoquePage() {
   const [ sectorId, setSectorId ] = useState<number | undefined>(sectors[0]?.id);
   const [ page, setPage ] = useState(1);
   const [ countTarget, setCountTarget ] = useState<ProductStock | undefined>(undefined);
+  // Bloco 6G Parte 4.1: "Configuração de compra" opens the same Sheet but
+  // straight to the priority step (row is already status "comprar" — that's
+  // the only time this column is clickable — so there's nothing to count).
+  const [ openToPriority, setOpenToPriority ] = useState(false);
 
   const { data, isPending, isError, isPlaceholderData, refetch } = useProductStocks({
     sectorId,
@@ -37,6 +41,16 @@ export default function EstoquePage() {
   function handleSectorChange(id: number) {
     setSectorId(id);
     setPage(1);
+  }
+
+  function handleCount(row: ProductStock) {
+    setOpenToPriority(false);
+    setCountTarget(row);
+  }
+
+  function handleConfigurePriority(row: ProductStock) {
+    setOpenToPriority(true);
+    setCountTarget(row);
   }
 
   return (
@@ -63,8 +77,8 @@ export default function EstoquePage() {
               <StockEmptyState />
             ) : (
               <div className={isPlaceholderData ? "opacity-60 transition-opacity" : undefined}>
-                <StockTable rows={data.data} onCount={setCountTarget} />
-                <StockCards rows={data.data} onCount={setCountTarget} />
+                <StockTable rows={data.data} onCount={handleCount} onConfigurePriority={handleConfigurePriority} />
+                <StockCards rows={data.data} onCount={handleCount} onConfigurePriority={handleConfigurePriority} />
                 <Pagination meta={data.meta} onPageChange={setPage} itemLabel="produtos" />
               </div>
             )
@@ -75,9 +89,13 @@ export default function EstoquePage() {
       <StockCountSheet
         open={countTarget !== undefined}
         onOpenChange={(open) => {
-          if (!open) setCountTarget(undefined);
+          if (!open) {
+            setCountTarget(undefined);
+            setOpenToPriority(false);
+          }
         }}
         row={countTarget}
+        openToPriority={openToPriority}
       />
     </div>
   );

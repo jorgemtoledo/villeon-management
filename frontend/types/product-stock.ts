@@ -7,6 +7,10 @@ import type { PaginationMeta } from "@/types/pagination";
 
 export type StockStatus = "nao_contado" | "ok" | "comprar" | "inativo";
 
+// Mirrors ProductStock#priority (Rails enum, backed by a nullable string
+// column) — manual business judgment, never derived from status/minimum/etc.
+export type StockPriority = "critical" | "normal" | "low";
+
 export interface ProductStock {
   product: { id: number; name: string; code: string; active: boolean };
   sector: NamedReference | null;
@@ -19,6 +23,10 @@ export interface ProductStock {
   purchase_quantity: number | null;
   status: StockStatus;
   minimum_configured: boolean;
+  // null = never configured, distinct from an explicit "low"/false — same
+  // distinction the backend (ProductStock) and the source spreadsheet make.
+  priority: StockPriority | null;
+  needs_advance_order: boolean | null;
 }
 
 // Mirrors Api::V1::ProductStocksController#stock_params — the only two
@@ -26,6 +34,14 @@ export interface ProductStock {
 export interface ProductStockConfigInput {
   minimum_quantity: number;
   ideal_quantity: number;
+}
+
+// Mirrors Api::V1::ProductStocksController#priority_params (the
+// sector-scoped, lockable endpoint — separate from the admin-only one
+// above). Both optional: either field can be sent on its own.
+export interface ProductStockPriorityInput {
+  priority?: StockPriority | null;
+  needs_advance_order?: boolean | null;
 }
 
 export interface ProductStocksResponse {

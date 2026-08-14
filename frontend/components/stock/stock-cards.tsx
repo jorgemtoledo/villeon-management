@@ -3,17 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatStockQuantity } from "@/lib/format-quantity";
 import { STOCK_STATUS_BADGE_VARIANT, STOCK_STATUS_LABEL } from "@/lib/format-stock-status";
+import { StockPurchaseConfigCell } from "@/components/stock/stock-purchase-config-cell";
 import type { ProductStock } from "@/types/product-stock";
 
 interface StockCardsProps {
   rows: ProductStock[];
   onCount: (row: ProductStock) => void;
+  onConfigurePriority: (row: ProductStock) => void;
 }
 
 // Mobile only (<md / 768px) — a 9-column table doesn't fit a phone screen
 // without horizontal scroll, so it becomes a stacked card list here instead
 // of the StockTable used on md+.
-export function StockCards({ rows, onCount }: StockCardsProps) {
+export function StockCards({ rows, onCount, onConfigurePriority }: StockCardsProps) {
   return (
     <div className="flex flex-col gap-3 md:hidden">
       {rows.map((row) => (
@@ -40,6 +42,12 @@ export function StockCards({ rows, onCount }: StockCardsProps) {
               <dt className="text-muted-foreground">Comprar</dt>
               <dd>{row.purchase_quantity ?? "—"}</dd>
             </dl>
+
+            <div className="flex flex-col gap-1 border-t border-border pt-3">
+              <span className="text-xs font-medium text-muted-foreground">Configuração de compra</span>
+              <StockPurchaseConfigCell row={row} onConfigure={onConfigurePriority} />
+            </div>
+
             <Button type="button" variant="outline" className="h-11 w-full" onClick={() => onCount(row)}>
               {row.status === "nao_contado" ? "Contar" : "Atualizar contagem"}
             </Button>

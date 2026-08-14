@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { LastPurchaseCell } from "@/components/products/last-purchase-cell";
 import { ProductStatusActions } from "@/components/products/product-status-actions";
 import { ProductSuppliersCell } from "@/components/products/product-suppliers-cell";
 import type { Product } from "@/types/product";
@@ -31,6 +32,8 @@ export function ProductsCards({ products, canManage, onEdit }: ProductsCardsProp
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Setor</dt>
               <dd>{product.sector?.name ?? "—"}</dd>
+              <dt className="text-muted-foreground">Subcategoria</dt>
+              <dd>{product.subcategory?.code ?? "—"}</dd>
               <dt className="text-muted-foreground">Unid. compra</dt>
               <dd>{product.purchase_unit?.abbreviation ?? "—"}</dd>
               <dt className="text-muted-foreground">Unid. estoque</dt>
@@ -38,6 +41,10 @@ export function ProductsCards({ products, canManage, onEdit }: ProductsCardsProp
               <dt className="text-muted-foreground">Fornecedores</dt>
               <dd onClick={(event) => event.stopPropagation()}>
                 <ProductSuppliersCell productId={product.id} count={product.product_suppliers_count} />
+              </dd>
+              <dt className="text-muted-foreground">Última compra</dt>
+              <dd>
+                <LastPurchaseCell product={product} />
               </dd>
             </dl>
             {canManage ? (

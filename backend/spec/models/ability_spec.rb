@@ -105,4 +105,36 @@ RSpec.describe Ability do
       expect(ability.can?(:create, StockCount.new(product: build_stubbed(:product)))).to be false
     end
   end
+
+  describe "priority/needs_advance_order authorization (Bloco 6G Parte 4)" do
+    let(:cozinha) { build_stubbed(:sector) }
+    let(:bar) { build_stubbed(:sector) }
+
+    it "manager gets it unconditionally, in any sector, even without all_sectors" do
+      user = build(:user, role: "manager", all_sectors: false)
+      ability = described_class.new(user)
+
+      expect(ability.can?(:update_priority, ProductStock.new(product: build_stubbed(:product, sector: bar)))).to be true
+    end
+
+    it "a sector-restricted operator gets it only within their own sector" do
+      user = build_stubbed(:user, role: "operator", all_sectors: false)
+      allow(user).to receive(:sector_ids).and_return([ cozinha.id ])
+      ability = described_class.new(user)
+
+      own_sector_stock = ProductStock.new(product: build_stubbed(:product, sector: cozinha))
+      other_sector_stock = ProductStock.new(product: build_stubbed(:product, sector: bar))
+
+      expect(ability.can?(:update_priority, own_sector_stock)).to be true
+      expect(ability.can?(:update_priority, other_sector_stock)).to be false
+    end
+
+    it "a user with no sector at all and all_sectors=false has no permission" do
+      user = build_stubbed(:user, role: "operator", all_sectors: false)
+      allow(user).to receive(:sector_ids).and_return([])
+      ability = described_class.new(user)
+
+      expect(ability.can?(:update_priority, ProductStock.new(product: build_stubbed(:product)))).to be false
+    end
+  end
 end

@@ -4,7 +4,7 @@ module Api
       DEFAULT_PER_PAGE = 25
       MAX_PER_PAGE = 100
 
-      before_action :set_product, only: %i[show update]
+      before_action :set_product, only: %i[show update update_priority]
 
       # GET /api/v1/product_stocks?sector_id=X
       # Sector defaults to the current user's own sectors when not given
@@ -60,7 +60,47 @@ module Api
         end
       end
 
+      # PATCH /api/v1/products/:product_id/stock/priority
+      # Bloco 6G Parte 4: priority/needs_advance_order. Separate from
+      # `update` above on purpose — that action is admin-only structural
+      # config (minimum/ideal); this one is sector-scoped and, unlike every
+      # other Ability rule in the app, its authorization also depends on the
+      # row's *current* data (already set once, by someone other than
+      # admin/manager, locks it) — CanCan's hash conditions can't express
+      # "was this already set", so that half of the check lives here.
+      def update_priority
+        stock = @product.product_stock || @product.build_product_stock
+        authorize! :update_priority, stock
+        raise CanCan::AccessDenied if locked_for_current_user?(stock)
+
+        begin
+          stock.assign_attributes(priority_params)
+        rescue ArgumentError
+          stock.errors.add(:priority, "é inválido")
+        end
+
+        if stock.errors.empty? && stock.save
+          render json: ProductStockSerializer.call(@product), status: :ok
+        else
+          render_unprocessable(stock)
+        end
+      end
+
       private
+
+      # Only admin/manager can touch a value someone already saved — an
+      # unsaved (never-configured) stock, or one where both fields are still
+      # nil, is always open to whoever the Ability rule already let through
+      # (sector-scoped operator included).
+      def locked_for_current_user?(stock)
+        return false if current_user.admin? || current_user.manager?
+
+        stock.persisted? && (stock.priority.present? || !stock.needs_advance_order.nil?)
+      end
+
+      def priority_params
+        params.require(:product_stock).permit(:priority, :needs_advance_order)
+      end
 
       def set_product
         @product = Product.find(params[:product_id])

@@ -31,6 +31,7 @@ export default function ProdutosPage() {
 
   const [search, setSearch] = useState("");
   const [sectorId, setSectorId] = useState<number | undefined>(undefined);
+  const [subcategoryId, setSubcategoryId] = useState<number | undefined>(undefined);
   const [status, setStatus] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
   const [sheetTarget, setSheetTarget] = useState<SheetTarget>(undefined);
@@ -40,19 +41,21 @@ export default function ProdutosPage() {
   // a filter that now only has 2 pages would just show an empty result.
   // Adjusted during render (React's documented pattern for this), not in an
   // effect, so the stale page never actually paints before the reset.
-  const [appliedFilters, setAppliedFilters] = useState({ search: debouncedSearch, sectorId, status });
+  const [appliedFilters, setAppliedFilters] = useState({ search: debouncedSearch, sectorId, subcategoryId, status });
   if (
     appliedFilters.search !== debouncedSearch ||
     appliedFilters.sectorId !== sectorId ||
+    appliedFilters.subcategoryId !== subcategoryId ||
     appliedFilters.status !== status
   ) {
-    setAppliedFilters({ search: debouncedSearch, sectorId, status });
+    setAppliedFilters({ search: debouncedSearch, sectorId, subcategoryId, status });
     setPage(1);
   }
 
   const { data, isPending, isError, isPlaceholderData, refetch } = useProducts({
     q: debouncedSearch || undefined,
     sectorId,
+    subcategoryId,
     active: status === "all" ? undefined : status === "active",
     page,
     perPage: PER_PAGE,
@@ -66,7 +69,7 @@ export default function ProdutosPage() {
         <div>
           <h1 className="text-xl font-semibold text-foreground">Catálogo de produtos</h1>
           <p className="text-sm text-muted-foreground">
-            Consulta do Catálogo Mestre — busca, filtro por setor/status e paginação.
+            Consulta do Catálogo Mestre — busca, filtro por setor/subcategoria/status e paginação.
           </p>
         </div>
         {canManage ? (
@@ -82,6 +85,8 @@ export default function ProdutosPage() {
         onSearchChange={setSearch}
         sectorId={sectorId}
         onSectorChange={setSectorId}
+        subcategoryId={subcategoryId}
+        onSubcategoryChange={setSubcategoryId}
         status={status}
         onStatusChange={setStatus}
       />
