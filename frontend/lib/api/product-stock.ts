@@ -11,6 +11,7 @@ function buildQueryString(query: ProductStocksQuery): string {
   const params = new URLSearchParams();
 
   if (query.sectorId) params.set("sector_id", String(query.sectorId));
+  if (query.status) params.set("status", query.status);
   if (query.active !== undefined) params.set("active", String(query.active));
   if (query.page) params.set("page", String(query.page));
   if (query.perPage) params.set("per_page", String(query.perPage));

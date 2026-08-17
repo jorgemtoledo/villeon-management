@@ -13,11 +13,13 @@ export function StockLoadingState() {
   );
 }
 
-export function StockEmptyState() {
+export function StockEmptyState({ filtered = false }: { filtered?: boolean }) {
   return (
     <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-16 text-center">
       <PackageSearch className="size-8 text-muted-foreground" aria-hidden="true" />
-      <p className="font-medium text-foreground">Nenhum produto neste setor</p>
+      <p className="font-medium text-foreground">
+        {filtered ? "Nenhum produto com esse status neste setor" : "Nenhum produto neste setor"}
+      </p>
     </div>
   );
 }

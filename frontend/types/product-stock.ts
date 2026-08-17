@@ -54,6 +54,7 @@ export interface ProductStocksResponse {
 // this endpoint and none was added, per "don't invent an endpoint").
 export interface ProductStocksQuery {
   sectorId?: number;
+  status?: StockStatus;
   active?: boolean;
   page?: number;
   perPage?: number;

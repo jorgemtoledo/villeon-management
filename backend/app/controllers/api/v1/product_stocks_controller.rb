@@ -6,7 +6,14 @@ module Api
 
       before_action :set_product, only: %i[show update update_priority]
 
-      # GET /api/v1/product_stocks?sector_id=X
+      VALID_STATUSES = [
+        StockCalculator::STATUS_NOT_COUNTED,
+        StockCalculator::STATUS_OK,
+        StockCalculator::STATUS_BUY,
+        StockCalculator::STATUS_INACTIVE
+      ].freeze
+
+      # GET /api/v1/product_stocks?sector_id=X&status=Y
       # Sector defaults to the current user's own sectors when not given
       # explicitly; requesting a sector outside the user's access is a 403,
       # never a silently-filtered empty result — a client can't discover
@@ -17,14 +24,19 @@ module Api
         scope = Product.includes(:sector, :purchase_unit, :stock_unit, :product_stock)
         scope = scope.where(sector_id: resolved_sector_ids) if resolved_sector_ids
         scope = apply_active_filter(scope)
+        scope = scope.order(:name)
 
-        pagy, products = pagy(scope.order(:name), limit: per_page_param)
-        counted_ids = counted_product_ids_for(products)
+        if params[:status].present?
+          render_status_filtered(scope)
+        else
+          pagy, products = pagy(scope, limit: per_page_param)
+          counted_ids = counted_product_ids_for(products)
 
-        render json: {
-          data: products.map { |product| ProductStockSerializer.call(product, counted: counted_ids.include?(product.id)) },
-          meta: pagination_meta(pagy)
-        }, status: :ok
+          render json: {
+            data: products.map { |product| ProductStockSerializer.call(product, counted: counted_ids.include?(product.id)) },
+            meta: pagination_meta(pagy)
+          }, status: :ok
+        end
       end
 
       # GET /api/v1/products/:product_id/stock
@@ -140,6 +152,36 @@ module Api
 
       def counted_product_ids_for(products)
         StockCount.where(product_id: products.map(&:id)).distinct.pluck(:product_id).to_set
+      end
+
+      # `status` is computed by StockCalculator (current/minimum/ideal/active/
+      # counted), never a stored column — so it can't be a `WHERE` clause.
+      # Loads the whole (already sector/active-scoped) list once, filters in
+      # Ruby by the same calculator every other endpoint uses (never a
+      # second, drifting implementation of the status formula), then
+      # paginates the filtered array by hand since Pagy only knows how to
+      # paginate a relation.
+      def render_status_filtered(scope)
+        unless VALID_STATUSES.include?(params[:status])
+          return render json: { error: "Status inválido." }, status: :unprocessable_content
+        end
+
+        products = scope.to_a
+        counted_ids = counted_product_ids_for(products)
+        filtered = products.select do |product|
+          StockCalculator.call(product, counted: counted_ids.include?(product.id))[:status] == params[:status]
+        end
+
+        per_page = per_page_param
+        total_count = filtered.size
+        total_pages = total_count.zero? ? 1 : (total_count.to_f / per_page).ceil
+        page = (params[:page].presence&.to_i || 1).clamp(1, total_pages)
+        paged = filtered.each_slice(per_page).to_a[page - 1] || []
+
+        render json: {
+          data: paged.map { |product| ProductStockSerializer.call(product, counted: counted_ids.include?(product.id)) },
+          meta: { page: page, per_page: per_page, total_pages: total_pages, total_count: total_count }
+        }, status: :ok
       end
 
       def resolved_sector_ids

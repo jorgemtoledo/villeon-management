@@ -7,6 +7,7 @@ import { allowedSectors, canViewStockHistory } from "@/lib/auth/permissions";
 import { useProductStocks } from "@/hooks/use-product-stocks";
 import { Pagination } from "@/components/shared/pagination";
 import { StockSectorSelect } from "@/components/stock/stock-sector-select";
+import { StockStatusSelect } from "@/components/stock/stock-status-select";
 import { StockTable } from "@/components/stock/stock-table";
 import { StockCards } from "@/components/stock/stock-cards";
 import { StockCountSheet } from "@/components/stock/stock-count-sheet";
@@ -17,7 +18,7 @@ import {
   StockLoadingState,
   StockNoSectorState,
 } from "@/components/stock/stock-states";
-import type { ProductStock } from "@/types/product-stock";
+import type { ProductStock, StockStatus } from "@/types/product-stock";
 
 const PER_PAGE = 25;
 
@@ -27,6 +28,7 @@ export default function EstoquePage() {
   const canViewHistory = canViewStockHistory(user);
 
   const [ sectorId, setSectorId ] = useState<number | undefined>(sectors[0]?.id);
+  const [ status, setStatus ] = useState<StockStatus | undefined>(undefined);
   const [ page, setPage ] = useState(1);
   const [ countTarget, setCountTarget ] = useState<ProductStock | undefined>(undefined);
   const [ historyTarget, setHistoryTarget ] = useState<ProductStock | undefined>(undefined);
@@ -37,12 +39,18 @@ export default function EstoquePage() {
 
   const { data, isPending, isError, isPlaceholderData, refetch } = useProductStocks({
     sectorId,
+    status,
     page,
     perPage: PER_PAGE,
   });
 
   function handleSectorChange(id: number) {
     setSectorId(id);
+    setPage(1);
+  }
+
+  function handleStatusChange(next: StockStatus | undefined) {
+    setStatus(next);
     setPage(1);
   }
 
@@ -69,7 +77,10 @@ export default function EstoquePage() {
         <StockNoSectorState />
       ) : (
         <>
-          <StockSectorSelect sectors={sectors} value={sectorId} onChange={handleSectorChange} />
+          <div className="flex flex-col gap-3 md:flex-row">
+            <StockSectorSelect sectors={sectors} value={sectorId} onChange={handleSectorChange} />
+            <StockStatusSelect value={status} onChange={handleStatusChange} />
+          </div>
 
           {isPending ? <StockLoadingState /> : null}
 
@@ -77,7 +88,7 @@ export default function EstoquePage() {
 
           {!isPending && !isError && data ? (
             data.data.length === 0 ? (
-              <StockEmptyState />
+              <StockEmptyState filtered={status !== undefined} />
             ) : (
               <div className={isPlaceholderData ? "opacity-60 transition-opacity" : undefined}>
                 <StockTable

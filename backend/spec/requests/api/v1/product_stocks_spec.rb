@@ -509,5 +509,80 @@ RSpec.describe "Api::V1::ProductStocks", type: :request do
 
       expect(response).to have_http_status(:forbidden)
     end
+
+    describe "?status filter" do
+      it "filters to only comprar (below minimum, has purchase quantity)" do
+        buy = create(:product, sector: cozinha, conversion_factor: 1)
+        create(:stock_count, product: buy, quantity: 1)
+        buy.product_stock.update!(minimum_quantity: 5, ideal_quantity: 10)
+
+        ok = create(:product, sector: cozinha, conversion_factor: 1)
+        create(:stock_count, product: ok, quantity: 10)
+        ok.product_stock.update!(minimum_quantity: 5, ideal_quantity: 10)
+
+        not_counted = create(:product, sector: cozinha)
+
+        get "/api/v1/product_stocks", params: { status: "comprar" }, headers: auth_headers(luiz)
+
+        body = JSON.parse(response.body)
+        ids = body["data"].map { |row| row["product"]["id"] }
+        expect(ids).to contain_exactly(buy.id)
+        expect(body["data"].first["status"]).to eq("comprar")
+        expect(ok.id).not_to be_in(ids)
+        expect(not_counted.id).not_to be_in(ids)
+      end
+
+      it "filters to nao_contado" do
+        create(:product, sector: cozinha, conversion_factor: 1).tap do |p|
+          create(:stock_count, product: p, quantity: 1)
+        end
+        not_counted = create(:product, sector: cozinha)
+
+        get "/api/v1/product_stocks", params: { status: "nao_contado" }, headers: auth_headers(luiz)
+
+        ids = JSON.parse(response.body)["data"].map { |row| row["product"]["id"] }
+        expect(ids).to contain_exactly(not_counted.id)
+      end
+
+      it "combines with sector_id" do
+        cozinha_buy = create(:product, sector: cozinha, conversion_factor: 1)
+        create(:stock_count, product: cozinha_buy, quantity: 1)
+        cozinha_buy.product_stock.update!(minimum_quantity: 5, ideal_quantity: 10)
+
+        bar_buy = create(:product, sector: bar, conversion_factor: 1)
+        create(:stock_count, product: bar_buy, quantity: 1)
+        bar_buy.product_stock.update!(minimum_quantity: 5, ideal_quantity: 10)
+
+        get "/api/v1/product_stocks", params: { status: "comprar", sector_id: bar.id }, headers: auth_headers(fran)
+
+        ids = JSON.parse(response.body)["data"].map { |row| row["product"]["id"] }
+        expect(ids).to contain_exactly(bar_buy.id)
+      end
+
+      it "returns correct pagination meta over the filtered set, not the full scope" do
+        3.times do
+          p = create(:product, sector: cozinha, conversion_factor: 1)
+          create(:stock_count, product: p, quantity: 1)
+          p.product_stock.update!(minimum_quantity: 5, ideal_quantity: 10)
+        end
+        create(:product, sector: cozinha) # nao_contado, must not count toward the "comprar" total
+
+        get "/api/v1/product_stocks", params: { status: "comprar", per_page: 2 }, headers: auth_headers(luiz)
+
+        meta = JSON.parse(response.body)["meta"]
+        expect(meta["total_count"]).to eq(3)
+        expect(meta["total_pages"]).to eq(2)
+        expect(JSON.parse(response.body)["data"].size).to eq(2)
+
+        get "/api/v1/product_stocks", params: { status: "comprar", per_page: 2, page: 2 }, headers: auth_headers(luiz)
+        expect(JSON.parse(response.body)["data"].size).to eq(1)
+      end
+
+      it "rejects an invalid status with 422" do
+        get "/api/v1/product_stocks", params: { status: "urgente" }, headers: auth_headers(luiz)
+
+        expect(response).to have_http_status(:unprocessable_content)
+      end
+    end
   end
 end
